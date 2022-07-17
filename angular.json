@@ -105,6 +105,37 @@
           }
         }
       }
+    },
+    "nui-dnd-lib": {
+      "projectType": "library",
+      "root": "projects/nui-dnd-lib",
+      "sourceRoot": "projects/nui-dnd-lib/src",
+      "prefix": "nui",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "projects/nui-dnd-lib/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/nui-dnd-lib/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/nui-dnd-lib/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "projects/nui-dnd-lib/src/test.ts",
+            "tsConfig": "projects/nui-dnd-lib/tsconfig.spec.json",
+            "karmaConfig": "projects/nui-dnd-lib/karma.conf.js"
+          }
+        }
+      }
     }
   },
   "defaultProject": "nui-dnd"
