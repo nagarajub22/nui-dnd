@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { Directive, ElementRef, Inject, NgZone, OnDestroy } from '@angular/core';
+import { Directive, ElementRef, Inject, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { Subject, takeUntil, tap } from 'rxjs';
 import { fromEvent } from 'rxjs';
 
@@ -18,31 +18,32 @@ export interface IPageCoord {
 @Directive({
   selector: '[nuiDrag]'
 })
-export class NuiDragDirective implements OnDestroy {
+export class NuiDragDirective implements OnInit, OnDestroy {
 
   private dragElInitialPosition!: IPageCoord;
-  private dragElCurrentPosition!: IPageCoord;
+  private dragElLastPosition!: IPageCoord;
   private dragStartPosition!: IPageCoord;
-  private dragCurrentPosition!: IPageCoord;
-  private dragDelta!: IPageCoord;
-  private dragOrgDelta!: IPageCoord;
-  
+
   private get dragEl(): HTMLElement {
     return this.el.nativeElement;
   }
 
   private isDragInitiated = false;
-
   private destroy$ = new Subject();
   private document: Document;
 
   constructor(
     private el: ElementRef,
-    private _ngZone: NgZone,
     @Inject(DOCUMENT) document: Document
   ) {
     this.document = document;
+  }
+
+  ngOnInit(): void {
     this.init();
+    if (!this.dragElInitialPosition) {
+      this.dragElInitialPosition = this.getElCoordinate(this.dragEl);
+    }
   }
 
   ngOnDestroy(): void {
@@ -54,7 +55,6 @@ export class NuiDragDirective implements OnDestroy {
   // private methods
 
   private init() {
-    this.dragElInitialPosition = this.getElCoordinate(this.dragEl);
     this.attachListeners();
   }
 
@@ -86,7 +86,7 @@ export class NuiDragDirective implements OnDestroy {
 
   private onPointerDown(evt: MouseEvent) {
     this.isDragInitiated = true;
-    this.dragElCurrentPosition = this.getElCoordinate(this.dragEl);
+    this.dragElLastPosition = this.getElCoordinate(this.dragEl);
     this.dragStartPosition = { x: evt.pageX, y: evt.pageY };
   }
 
@@ -103,23 +103,22 @@ export class NuiDragDirective implements OnDestroy {
 
   private moveElement(evt: MouseEvent) {
     if (this.isDragInitiated) {
-
-      const currentDelta = {
-        x: this.dragStartPosition.x - this.dragElCurrentPosition.x,
-        y: this.dragStartPosition.y - this.dragElCurrentPosition.y
-      };
-
-      const currentOrgDelta = {
-        x: this.dragElInitialPosition.x - currentDelta.x,
-        y: this.dragElInitialPosition.y - currentDelta.y 
-      };
-
       const distanceMoved = {
-        x: evt.pageX - currentOrgDelta.x,
-        y: evt.pageY - currentOrgDelta.y
+        x: evt.pageX - this.dragStartPosition.x,
+        y: evt.pageY - this.dragStartPosition.y
       };
 
-      this.dragEl.style.transform = `translate3d(${distanceMoved.x}px, ${distanceMoved.y}px, 0px)`;
+      const lastDistanceMoved = {
+        x: this.dragElLastPosition.x - this.dragElInitialPosition.x,
+        y: this.dragElLastPosition.y - this.dragElInitialPosition.y
+      };
+
+      const newPosition = {
+        x: distanceMoved.x + lastDistanceMoved.x,
+        y: distanceMoved.y + lastDistanceMoved.y
+      };
+
+      this.dragEl.style.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0px)`;
       this.setStyleOnMove();
     }
   }
@@ -134,6 +133,6 @@ export class NuiDragDirective implements OnDestroy {
   }
 
   private removeMoveStyle() {
-    this.dragEl.style.removeProperty('userSelect');
+    this.dragEl.style.removeProperty('user-select');
   }
 }
