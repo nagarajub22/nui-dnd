@@ -24,3 +24,29 @@ html, body {
   p {
     margin: 0;
   }
+
+  .wrapper {
+    padding: 50px;
+  }
+
+  .box {
+    width: 600px;
+    margin: 20px auto;
+    padding: 40px;
+    border-radius: 4px;
+  }
+
+  .box-small {
+    width: 300px;
+    height: 300px;
+  }
+
+
+  [nuiDrag] {
+    width: 100px; 
+    height: 100px; 
+    text-align: center; 
+    line-height: 100px;
+    border: 1px solid #dcdcdc;
+    background-color: white;
+  }

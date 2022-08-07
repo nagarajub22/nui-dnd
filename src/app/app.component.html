@@ -1,7 +1,12 @@
-<div style="width: 300px; height: 300px; margin: 30px auto;">
-    <div style="width: 100px; height: 100px; text-align: center; line-height: 100px; border: 1px solid #000;" nuiDrag *ngIf="!toggleEl">Drag Me</div>
+<div class="wrapper">
+    <div class="box">
+        <div nuiDrag [ngClass]="{'animate': showAnimation}">Drag Me</div>
+    </div>
+    <br/>
+    <div class="box box-small">
+        <div nuiDrag>Drag Me</div>
+    </div>
+
+    <button (click)="showAnimation = !showAnimation">Toggle Animation</button>
+
 </div>
-
-
-<br/>
-<button (click)="toggleEl = !toggleEl">toggleEl</button>

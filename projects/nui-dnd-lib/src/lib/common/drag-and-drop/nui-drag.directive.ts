@@ -1,13 +1,13 @@
 import { DOCUMENT } from '@angular/common';
-import { Directive, ElementRef, Inject, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { Directive, ElementRef, EventEmitter, Inject, NgZone, OnDestroy, OnInit, Output } from '@angular/core';
 import { Subject, takeUntil, tap } from 'rxjs';
 import { fromEvent } from 'rxjs';
 
 export interface IDOMRect {
   x: number;
   y: number;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
 }
 
 export interface IPageCoord {
@@ -20,9 +20,9 @@ export interface IPageCoord {
 })
 export class NuiDragDirective implements OnInit, OnDestroy {
 
-  private dragElInitialPosition!: IPageCoord;
-  private dragElLastPosition!: IPageCoord;
-  private dragStartPosition!: IPageCoord;
+  @Output() dragEnd: EventEmitter<MouseEvent> = new EventEmitter();
+
+  private dragElLastPosition!: IDOMRect;
 
   private get dragEl(): HTMLElement {
     return this.el.nativeElement;
@@ -34,6 +34,7 @@ export class NuiDragDirective implements OnInit, OnDestroy {
 
   constructor(
     private el: ElementRef,
+    private ngZone: NgZone,
     @Inject(DOCUMENT) document: Document
   ) {
     this.document = document;
@@ -41,9 +42,6 @@ export class NuiDragDirective implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.init();
-    if (!this.dragElInitialPosition) {
-      this.dragElInitialPosition = this.getElCoordinate(this.dragEl);
-    }
   }
 
   ngOnDestroy(): void {
@@ -55,7 +53,9 @@ export class NuiDragDirective implements OnInit, OnDestroy {
   // private methods
 
   private init() {
-    this.attachListeners();
+    this.ngZone.runOutsideAngular(() => {
+      this.attachListeners();
+    });
   }
 
   private attachListeners() {
@@ -86,8 +86,7 @@ export class NuiDragDirective implements OnInit, OnDestroy {
 
   private onPointerDown(evt: MouseEvent) {
     this.isDragInitiated = true;
-    this.dragElLastPosition = this.getElCoordinate(this.dragEl);
-    this.dragStartPosition = { x: evt.pageX, y: evt.pageY };
+    this.dragElLastPosition = { x: evt.pageX, y: evt.pageY };
   }
 
   private onPointerMove(evt: MouseEvent) {
@@ -97,35 +96,28 @@ export class NuiDragDirective implements OnInit, OnDestroy {
   }
 
   private onPointerUp(evt: MouseEvent) {
-    this.isDragInitiated = false;
-    this.removeMoveStyle();
+    this.ngZone.run(() => {
+      this.isDragInitiated = false;
+      this.removeMoveStyle();
+      this.dragEnd.emit(evt);
+    });
   }
 
   private moveElement(evt: MouseEvent) {
     if (this.isDragInitiated) {
-      const distanceMoved = {
-        x: evt.pageX - this.dragStartPosition.x,
-        y: evt.pageY - this.dragStartPosition.y
+
+      const lastKnownDistance = this.getAttributeXY(this.el.nativeElement);
+      const newDistance = {
+        x: lastKnownDistance.x + (evt.pageX - this.dragElLastPosition.x), 
+        y: lastKnownDistance.y + (evt.pageY - this.dragElLastPosition.y) 
       };
 
-      const lastDistanceMoved = {
-        x: this.dragElLastPosition.x - this.dragElInitialPosition.x,
-        y: this.dragElLastPosition.y - this.dragElInitialPosition.y
-      };
+      this.dragElLastPosition = { x: evt.pageX, y: evt.pageY };
+      this.setAttributeXY(this.el.nativeElement, newDistance);
 
-      const newPosition = {
-        x: distanceMoved.x + lastDistanceMoved.x,
-        y: distanceMoved.y + lastDistanceMoved.y
-      };
-
-      this.dragEl.style.transform = `translate3d(${newPosition.x}px, ${newPosition.y}px, 0px)`;
+      this.dragEl.style.transform = `translate3d(${newDistance.x}px, ${newDistance.y}px, 0px)`;
       this.setStyleOnMove();
     }
-  }
-
-  private getElCoordinate(el: HTMLElement) {
-    const { left, top, width, height } = el.getBoundingClientRect();
-    return { x: left, y: top, width, height };
   }
 
   private setStyleOnMove() {
@@ -135,4 +127,19 @@ export class NuiDragDirective implements OnInit, OnDestroy {
   private removeMoveStyle() {
     this.dragEl.style.removeProperty('user-select');
   }
+
+  private setAttributeXY(element: HTMLElement, position: IDOMRect) {
+    if(element) {
+      element.setAttribute('x', position.x.toString());
+      element.setAttribute('y', position.y.toString());
+    }
+  }
+
+  private getAttributeXY(element: HTMLElement): IDOMRect {
+    return {
+      x: parseInt(element.getAttribute('x') || '0', 10),
+      y: parseInt(element.getAttribute('y') || '0', 10)
+    }
+  }
+
 }
